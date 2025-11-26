@@ -42,13 +42,13 @@ func (a *authService) Register(ctx context.Context, input *dto.AuthenticationInp
 		return nil, fmt.Errorf("error hashing password: %v", err)
 	}
 
-	user := &domain.User{
+	user, err := a.userRepository.Create(ctx, &domain.User{
 		Username: input.Username,
 		Email:    input.Email,
 		Password: string(hashedPassword),
-	}
+	})
 
-	if err := a.userRepository.Create(ctx, user); err != nil {
+	if err != nil {
 		return nil, fmt.Errorf("error creating user: %v", err)
 	}
 
