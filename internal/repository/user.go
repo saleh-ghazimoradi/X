@@ -4,14 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"github.com/saleh-ghazimoradi/X/internal/customErr"
 	"github.com/saleh-ghazimoradi/X/internal/domain"
 	"time"
 )
 
 type UserRepository interface {
-	Create(ctx context.Context, user *domain.User) error
+	Create(ctx context.Context, user *domain.User) (*domain.User, error)
 	GetByUsername(ctx context.Context, username string) (*domain.User, error)
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
 }
@@ -21,21 +20,16 @@ type userRepository struct {
 	dbRead  *sql.DB
 }
 
-func (u *userRepository) Create(ctx context.Context, user *domain.User) error {
+func (u *userRepository) Create(ctx context.Context, user *domain.User) (*domain.User, error) {
 	query := `INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, created_at`
 	args := []any{user.Username, user.Email, user.Password}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	if err := u.dbWrite.QueryRowContext(ctx, query, args...).Scan(&user.Id, &user.CreatedAt); err != nil {
-		switch {
-		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
-			return fmt.Errorf("user already exists: %w", err)
-		default:
-			return err
-		}
+		return nil, err
 	}
-	return nil
+	return user, nil
 }
 
 func (u *userRepository) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
