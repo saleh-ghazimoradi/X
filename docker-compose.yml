@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:latest
-    container_name: ${POSTGRES_NAME}
+    container_name: "XContainer"
     restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_NAME}
