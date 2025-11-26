@@ -12,61 +12,62 @@ import (
 )
 
 //go:embed *.sql
-var migrationsFS embed.FS
+var migrationsFs embed.FS
 
-type Migration struct {
+type Migrate struct {
 	db        *sql.DB
-	dbname    string
+	dbName    string
 	migration *migrate.Migrate
 }
 
-func (m *Migration) Up() error {
+func (m *Migrate) UP() error {
 	if err := m.migration.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("%w: failed to apply migration", err)
+		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
-	fmt.Println("Migration applied successfully")
+	fmt.Println("Migrations applied successfully")
 	return nil
 }
 
-func (m *Migration) Rollback() error {
+func (m *Migrate) Rollback() error {
 	if err := m.migration.Steps(-1); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("%w: failed to rollback migration", err)
+		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
-	fmt.Println("Migration rollback applied successfully")
+	fmt.Println("Last migration rolled back successfully")
 	return nil
 }
 
-func (m *Migration) Close() error {
+func (m *Migrate) Close() error {
 	if m.migration != nil {
 		source, driver := m.migration.Close()
 		if source != nil {
-			return fmt.Errorf("%w: failed to close migration source", source)
+			return fmt.Errorf("failed to close source: %w", source)
 		}
 		if driver != nil {
-			return fmt.Errorf("%w: failed to close migration driver", driver)
+			return fmt.Errorf("failed to close driver: %w", driver)
 		}
 	}
 	return nil
 }
 
-func NewMigration(db *sql.DB, dbname string) (*Migration, error) {
+func NewMigrate(db *sql.DB, dbName string) (*Migrate, error) {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to create migration driver", err)
+		return nil, fmt.Errorf("failed to create migration driver: %w", err)
 	}
 
-	source, err := iofs.New(migrationsFS, ".")
+	source, err := iofs.New(migrationsFs, ".")
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to create migration source", err)
+		return nil, fmt.Errorf("failed to load migration files: %w", err)
 	}
 
-	m, err := migrate.NewWithInstance("iofs", source, dbname, driver)
+	m, err := migrate.NewWithInstance("iofs", source, dbName, driver)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to create migration", err)
+		return nil, fmt.Errorf("failed to initialize migrate: %w", err)
 	}
-	return &Migration{
+
+	return &Migrate{
 		db:        db,
-		dbname:    dbname,
+		dbName:    dbName,
 		migration: m,
 	}, nil
 }
